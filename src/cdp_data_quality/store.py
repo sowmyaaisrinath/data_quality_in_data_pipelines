@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import duckdb
@@ -33,7 +33,7 @@ class MetricStore:
         )
         self.connection.execute(
             "INSERT INTO quality_metrics VALUES (?, ?, ?, ?, ?)",
-            [run_id, datetime.now(UTC), table, metric_name, value],
+            [run_id, datetime.now(timezone.utc), table, metric_name, value],
         )
 
     def delete_prefix(self, run_id: str, table: str, metric_prefix: str) -> None:

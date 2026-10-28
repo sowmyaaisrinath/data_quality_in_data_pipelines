@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import duckdb
@@ -22,7 +22,7 @@ class QualityRunner:
     ) -> None:
         self.config_path = Path(config_path)
         self.history_path = Path(history_path)
-        self.run_id = run_id or datetime.now(UTC).strftime("%Y%m%dT%H%M%S.%fZ")
+        self.run_id = run_id or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
 
     def run(self) -> list[CheckResult]:
         tables, specs = load_config(self.config_path)
