@@ -1,0 +1,8 @@
+identity_id,customer_id,identity_type,identity_value,is_primary
+I001,C001,email,ava@example.com,true
+I002,C001,device,dev-a1,false
+I003,C002,email,liam@example.co.uk,true
+I004,C003,email,noah@example.ca,true
+I005,C004,device,dev-d4,true
+I006,C005,email,emma@example.com,true
+I007,C005,device,dev-e5,false

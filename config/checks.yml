@@ -1,0 +1,157 @@
+tables:
+  customers: ../examples/data/customers.csv
+  identities: ../examples/data/identities.csv
+  events: ../examples/data/events.csv
+
+checks:
+  # Schema and row-level checks
+  - name: customer schema
+    type: required_columns
+    table: customers
+    columns: [customer_id, email, country, consent_status, profile_completeness, updated_at]
+
+  - name: customer id type
+    type: data_type
+    table: customers
+    column: customer_id
+    allowed: [VARCHAR]
+
+  - name: customer id is complete
+    type: null_rate
+    table: customers
+    column: customer_id
+    max: 0
+
+  - name: email completeness
+    type: null_rate
+    table: customers
+    column: email
+    max: 0.25
+    severity: warn
+
+  - name: unique customer id
+    type: unique
+    table: customers
+    column: customer_id
+
+  - name: valid consent status
+    type: accepted_values
+    table: customers
+    column: consent_status
+    values: [opted_in, opted_out, unknown]
+
+  - name: email format
+    type: regex
+    table: customers
+    column: email
+    pattern: '^[^@\s]+@[^@\s]+\.[^@\s]+$'
+
+  - name: profile score range
+    type: range
+    table: customers
+    column: profile_completeness
+    min: 0
+    max: 1
+
+  - name: consent business rule
+    type: sql_expression
+    table: customers
+    expression: "consent_status <> 'opted_out' OR email IS NULL"
+
+  # CDP identity, event, and relationship checks
+  - name: identities resolve to customers
+    type: referential_integrity
+    table: identities
+    column: customer_id
+    parent_table: customers
+    parent_column: customer_id
+    max_orphan_rate: 0
+
+  - name: identity values are unique by type
+    type: unique
+    table: identities
+    columns: [identity_type, identity_value]
+
+  - name: events resolve to customers
+    type: referential_integrity
+    table: events
+    column: customer_id
+    parent_table: customers
+    parent_column: customer_id
+    max_orphan_rate: 0.01
+
+  - name: event timestamps are ordered
+    type: sql_expression
+    table: events
+    expression: "ingested_at >= event_at"
+
+  - name: eligible opted-in profiles are usable
+    type: sql_expression
+    table: customers
+    expression: "consent_status <> 'opted_in' OR (email IS NOT NULL AND profile_completeness >= 0.7)"
+
+  # Pipeline operations
+  - name: customer data freshness
+    type: freshness
+    table: customers
+    column: updated_at
+    max_age_hours: 4
+    reference_time: "2026-10-27 16:00:00"
+
+  - name: event volume bounds
+    type: row_count
+    table: events
+    min: 5
+    max: 1000000
+
+  - name: event arrival lag
+    type: late_arriving
+    table: events
+    event_time_column: event_at
+    ingestion_time_column: ingested_at
+    max_lag_hours: 1
+    max_late_rate: 0.01
+
+  - name: daily event partitions
+    type: partition_completeness
+    table: events
+    column: event_at
+    expected_partitions: 2
+
+  - name: duplicate event ingestion
+    type: duplicate_ingestion
+    table: events
+    columns: [event_id]
+    max_duplicates: 0
+
+  # Historical checks (WARN while their baselines are being built)
+  - name: event count run over run
+    type: run_comparison
+    table: events
+    metric: row_count
+    max_change_pct: 0.30
+
+  - name: rolling customer volume
+    type: rolling_baseline
+    table: customers
+    metric: row_count
+    window: 7
+    min_history: 3
+    max_deviation_pct: 0.20
+
+  - name: event source distribution drift
+    type: category_drift
+    table: events
+    column: source
+    max_total_variation: 0.15
+    severity: warn
+
+  - name: slowly degrading email completeness
+    type: trend
+    table: customers
+    metric: "null_rate:email"
+    window: 7
+    min_history: 4
+    bad_direction: up
+    max_bad_slope_pct: 0.10
+    severity: warn

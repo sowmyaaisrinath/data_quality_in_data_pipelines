@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cdp-data-quality"
+version = "0.1.0"
+description = "Configuration-driven data quality checks for Customer Data Platform pipelines"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "CDP Data Quality contributors" }]
+dependencies = [
+  "duckdb>=1.1,<2",
+  "PyYAML>=6.0,<7",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<9",
+  "ruff>=0.7,<1",
+]
+
+[project.scripts]
+cdp-quality = "cdp_data_quality.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cdp_data_quality"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
